@@ -119,10 +119,9 @@ namespace Altumo{
 
             current_query =
                 "CREATE TABLE `geo_ip_block`("
-                        "`start_ip` INTEGER UNSIGNED NOT NULL,"
-                        "`end_ip` INTEGER UNSIGNED NOT NULL,"
+                        "`ip_address` GEOMETRY NOT NULL,"
                         "`location_id` INTEGER UNSIGNED NOT NULL,"
-                        "INDEX `ip_range_index` ( `start_ip`, `end_ip` ),"
+                        "SPATIAL INDEX `ip_range_index` ( `ip_address` ),"
                         "INDEX `location_index` ( `location_id` )"
                 ") ENGINE=MyISAM"
             ;
@@ -242,11 +241,12 @@ namespace Altumo{
             boost::cmatch result;
             string line;
             const size_t batch_size = 5000;
+            string geometry;
 
         //import the blocks section
             ifstream blocks_file( this->blocks_filename.c_str() );
             const boost::regex blocks_pattern( "\"(\\d+)\",\"(\\d+)\",\"(\\d+)\"" );
-            blocks_insert_query = "INSERT INTO geo_ip_block( start_ip, end_ip, location_id ) VALUES ";
+            blocks_insert_query = "INSERT INTO geo_ip_block( `ip_address`, `location_id` ) VALUES ";
             insert_query = blocks_insert_query;
 
             while( !blocks_file.eof() ){
@@ -262,13 +262,8 @@ namespace Altumo{
                     }else{
                         first = false;
                     }
-                    insert_query += " (" +
-                                  escapeString( result[1].str().c_str() ) +
-                                ", " +
-                                  escapeString( result[2].str().c_str() ) +
-                                ", " +
-                                  escapeString( result[3].str().c_str() ) +
-                                ")";
+                    geometry = " GeomFromText( 'LineString(1 " + escapeString( result[1].str().c_str() ) + ",1 " + escapeString( result[2].str().c_str() ) + ")' ) ";
+                    insert_query += " ( " + geometry + ", " + escapeString( result[3].str().c_str() ) + ")";
 
                     if( number_of_imported_records % batch_size == 0 ){
                         this->connector->executeStatement( insert_query );
