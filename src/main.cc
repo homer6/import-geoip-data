@@ -13,10 +13,10 @@ int main( int argc, char** argv ){
         return error_number;
     }
 
-    importer->clearExistingTables();
-    importer->createNewTables();
+    //importer->clearExistingTables();
+    //importer->createNewTables();
     importer->importLocationsFile();
-    importer->importBlocksFile();
+    //importer->importBlocksFile();
 
     while( !importer->readyToClose() ){
         usleep( 30000 );

@@ -41,7 +41,7 @@ namespace Altumo{
             desc.add_options()
                 ( "help", "produce help message" )
                 ( "locations-file", boost::program_options::value<string>(), "The locations csv eg. GeoIPCity-134-Location.csv" )
-                ( "blocks-file", boost::program_options::value<string>(), "The blocks csv eg. GeoIPCity-134-Blocks.csv" )
+                //( "blocks-file", boost::program_options::value<string>(), "The blocks csv eg. GeoIPCity-134-Blocks.csv" )
             ;
 
             boost::program_options::variables_map variables_map;
@@ -61,6 +61,7 @@ namespace Altumo{
                 return 1;
             }
 
+            /*
             if( variables_map.count("blocks-file") ){
                 this->blocks_filename = variables_map["blocks-file"].as<string>();
             }else{
@@ -68,6 +69,7 @@ namespace Altumo{
                 cout << desc << "\n";
                 return 1;
             }
+            */
 
             return 0;
 
@@ -147,15 +149,14 @@ namespace Altumo{
             int number_of_skipped_records = 0;
             boost::cmatch result;
             string line;
-            string metro_code;
-            string area_code;
+            string population;
 
         //import the locations section
             ifstream locations_file( this->locations_filename.c_str() );
-            const boost::regex locations_pattern( "(\\d+),\"(..)\",\"(..)\",\"(.*?)\",\"(.*?)\",(.*?),(.*?),(\\d*),(\\d*)" );
+            const boost::regex locations_pattern( "(..),(.*?),(.*?),(.*?),(.*?),(.*?),(.*)" );
             number_of_imported_records = 0;
             first = true;
-            locations_insert_query = "INSERT INTO geo_ip_location( id, country, region, city, postal_code, latitude, longitude, metro_code, area_code ) VALUES ";
+            locations_insert_query = "INSERT INTO search_index_city( country_code, name_as_ascii, name_as_latin1, state_code, population, latitude, longitude ) VALUES ";
             insert_query = locations_insert_query;
 
             while( !locations_file.eof() ){
@@ -171,35 +172,26 @@ namespace Altumo{
                         first = false;
                     }
 
-                    metro_code = escapeString( result[8].str().c_str() );
-                    if( metro_code.length() == 0 ){
-                        metro_code = "NULL";
+                    population = escapeString( result[5].str().c_str() );
+                    if( population.length() == 0 ){
+                        population = "NULL";
                     }
 
-                    area_code = escapeString( result[8].str().c_str() );
-                    if( area_code.length() == 0 ){
-                        area_code = "NULL";
-                    }
-
-                    insert_query += " (" +
+                    insert_query += " (\"" +
                                   escapeString( result[1].str().c_str() ) +
-                                ", \"" +
+                                "\", \"" +
                                   escapeString( result[2].str().c_str() ) +
                                 "\", \"" +
                                   escapeString( result[3].str().c_str() ) +
                                 "\", \"" +
                                   escapeString( result[4].str().c_str() ) +
-                                "\", \"" +
-                                  escapeString( result[5].str().c_str() ) +
                                 "\", " +
+                                  population +
+                                ", \"" +
                                   escapeString( result[6].str().c_str() ) +
-                                ", " +
+                                "\", \"" +
                                   escapeString( result[7].str().c_str() ) +
-                                ", " +
-                                  metro_code +
-                                ", " +
-                                  area_code +
-                                ")";
+                                "\")";
 
                     if( insert_query.length() > this->mysql_max_packet_size ){
                         this->connector->executeStatement( insert_query );
